@@ -19,7 +19,7 @@ Base.prepare(engine, reflect=True)
 
 # Save reference to the table
 Measurement = Base.classes.measurement
-Station= Base.classes.station
+Station = Base.classes.station
 
 # Create session (link) from Python to the DB
 session = Session(engine)
@@ -48,24 +48,21 @@ def welcome():
 ###Precipitation
 @app.route("/api/v1.0/precipitation")
 def prcp(input_date):
+    previous_year = dt.date(2017,8,23) - dt.timedelta(days=365)
     """Return a list of precipitation data with date as the key and prcp as the value"""
     # Query data
-    data = session.query(Measurement.prcp).filter(func.strftime("%Y-%m-%d", input_date)== Measurement.date).all() 
-    # Create a dictionary from the row data and append to a list 
-    precipitation = []
-    for name, age, sex in results:
-        prcp_dict = {}
-        prcp_dict["date"] = input_date
-        prcp_dict["precipitation"] = data
-        precipitation.append(prcp_dict)
+    precipitation = session.query(Measurement.date, Measurement.prcp).\
+        filter(Measurement.date >= prev_year).all() 
 
-    return jsonify(precipitation)
+    precip = {date: prcp for date, prcp in precipitation}
+    return jsonify(precip)
 
 ###Station Data
 @app.route("/api/v1.0/stations")
 def stations():
     station=session.query(Station.station)
-    return jsonify(station)
+    stationresults=list(np.ravel(results))
+    return jsonify(stationresults)
 
 ###Temperature Data
 
@@ -73,17 +70,24 @@ def stations():
 @app.route("/api/v1.0/tobs/<start_date>")
 def temp():
     previous_year = dt.date(2017,8,23) - dt.timedelta(days=365)
-    year_temp = session.query(Measurement.tobs).\
-      filter(Measurement.date >= one_year_ago, Measurement.station == 'USC00519281').\
+#     year_temp = session.query(Measurement.tobs).\
+#       filter(Measurement.date >= previous_year, Measurement.station == 'USC00519281').\
+#       order_by(Measurement.tobs).all()
+
+#     year_temp = []
+#     for y_t in year_temp:
+#         yrtemp = {}
+#         yrtemp["tobs"] = y_t.tobs
+#         year_temp.append(yrtemp)
+
+#     return jsonify(year_temp)    
+
+    station_temp = session.query(Measurement.tobs).\
+      filter(Measurement.date >= previous_year, Measurement.station == 'USC00519281').\
       order_by(Measurement.tobs).all()
 
-    year_temp = []
-    for y_t in year_temp:
-        yrtemp = {}
-        yrtemp["tobs"] = y_t.tobs
-        year_temp.append(yrtemp)
-
-    return jsonify(year_temp)    
+    year_temp = list(np.ravel(station_temp))
+    return jsonify(year_temp)
 
 #temp mins, maxs, and avgs for given start date
 def temp_start(start_date):
